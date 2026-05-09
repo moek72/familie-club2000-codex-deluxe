@@ -12,6 +12,12 @@ export function renderControls(state) {
     </section>
 
     <section class="controls" id="controls">
+      <div class="gamble-strip" id="gambleStrip">
+        <span class="gamble-side gamble-kop">KOP</span>
+        <i class="gamble-runner"></i>
+        <span class="gamble-side gamble-munt">MUNT</span>
+        <strong id="pendingDisplay">000</strong>
+      </div>
       <button class="control-button kop" data-action="kop" type="button">KOP</button>
       <button class="control-button munt" data-action="munt" type="button">MUNT</button>
       <button class="control-button collect" data-action="collect" type="button">COLLECT</button>
@@ -34,7 +40,12 @@ export function updateStatus(message) {
 export function setControlState(state) {
   const isSpinning = state.mode === 'spinning' || state.mode === 'feature-spinning';
   const isGamble = state.mode === 'gambling';
+  const isCollecting = state.mode === 'collecting';
   const hasPending = Boolean(state.pendingWin);
+  const controls = document.getElementById('controls');
+  const pending = document.getElementById('pendingDisplay');
+  controls?.classList.toggle('gamble-active', isGamble || isCollecting);
+  if (pending) pending.textContent = String(state.pendingWin?.amount || 0).padStart(3, '0');
   document.querySelector('[data-action="start"]')?.toggleAttribute('disabled', isSpinning || isGamble || hasPending || state.credit <= 0);
   document.querySelector('[data-action="feature"]')?.toggleAttribute('disabled', isSpinning || isGamble || hasPending || state.club < 4);
   document.querySelector('[data-action="collect"]')?.toggleAttribute('disabled', isSpinning || !hasPending);

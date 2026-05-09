@@ -14,7 +14,6 @@ import {
   closePopup,
   renderPopupRoot,
   showBonusPopup,
-  showCoinFlip,
   showCollectPopup,
   showGambleResult,
   showIntro,
@@ -240,40 +239,31 @@ function finishSpin(symbols, feature) {
 
 function showGamblePrompt(win) {
   patchState({ pendingWin: win, mode: 'gambling' });
-  showWinPopup(win, (choice) => {
-    if (choice === 'collect') collectPending();
-    else chooseGamble(choice);
-  });
+  closePopup();
+  setMessage(`${win.title}: ${win.amount} punten - kies KOP/MUNT of COLLECT`);
   updateEverything();
 }
 
 function chooseGamble(choice) {
   if (state.mode !== 'gambling' || !state.pendingWin) return;
   const currentWin = state.pendingWin;
-  showCoinFlip({ choice, amount: currentWin.amount }, () => {
-    const result = flipCoin(choice);
-    sounds.flip();
-    if (result.won) {
-      const amount = doublePrize(currentWin.amount);
-      const updatedWin = { ...currentWin, amount };
-      patchState({ pendingWin: updatedWin });
-      sounds.win();
-      setMessage(`Goed! Prijs verdubbeld naar ${amount}`);
-      window.setTimeout(() => {
-        if (amount >= 200) collectPending();
-        else showGamblePrompt(updatedWin);
-      }, 450);
-    } else {
-      patchState({ pendingWin: null, mode: 'idle' });
-      sounds.lose();
-      showGambleResult(result, 0, () => {
-        closePopup();
-        updateEverything();
-      });
-      setMessage('Helaas, munt viel verkeerd.');
-    }
+  const result = flipCoin(choice);
+  flashGambleResult(choice, result.outcome);
+  sounds.flip();
+  if (result.won) {
+    const amount = doublePrize(currentWin.amount);
+    const updatedWin = { ...currentWin, amount };
+    patchState({ pendingWin: updatedWin, mode: 'gambling' });
+    sounds.win();
+    setMessage(`Goed: ${choice.toUpperCase()}! Prijs nu ${amount} punten`);
     updateEverything();
-  });
+    if (amount >= 200) window.setTimeout(collectPending, 700);
+  } else {
+    patchState({ pendingWin: null, mode: 'idle' });
+    sounds.lose();
+    setMessage(`Mis: het werd ${result.outcome.toUpperCase()}. Prijs kwijt.`);
+    updateEverything();
+  }
 }
 
 function collectPending() {
@@ -304,6 +294,19 @@ function maybeBonus() {
   sounds.dogBonus();
   updateEverything();
   showBonusPopup(() => setMessage('Bonus voorbij, START staat klaar'));
+}
+
+function flashGambleResult(choice, outcome) {
+  const controls = document.getElementById('controls');
+  if (!controls) return;
+  controls.dataset.choice = choice;
+  controls.dataset.outcome = outcome;
+  controls.classList.add('gamble-reveal');
+  window.setTimeout(() => {
+    controls.classList.remove('gamble-reveal');
+    delete controls.dataset.choice;
+    delete controls.dataset.outcome;
+  }, 650);
 }
 
 function handleDebug(action) {
