@@ -1,4 +1,4 @@
-/* KPN Rittenregistratie — stijlen */
+/* Moek's Rittenregistratie — stijlen */
 
 :root {
   --kpn-blue: #00A3E0;
@@ -511,8 +511,15 @@ body {
   gap: 8px;
 }
 
-.input-pc { width: 110px; flex-shrink: 0; }
-.input-place { flex: 1; }
+.location-row input { min-width: 0; }
+.location-row .input-pc {
+  width: 110px;
+  flex: 0 0 110px;
+}
+.location-row .input-place {
+  width: auto;
+  flex: 1 1 auto;
+}
 
 .km-feedback {
   font-size: 13px;
@@ -557,6 +564,8 @@ body {
   z-index: 200;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .modal.hidden { display: none; }
@@ -572,6 +581,7 @@ body {
   position: relative;
   z-index: 1;
   width: 100%;
+  max-width: 480px;
   background: var(--white);
   border-radius: 20px 20px 0 0;
   padding: 8px 20px 24px;
@@ -622,8 +632,9 @@ body {
   font-size: 14px;
   font-weight: 500;
   z-index: 300;
-  white-space: nowrap;
+  white-space: normal;
   max-width: calc(100vw - 32px);
+  line-height: 1.35;
   text-align: center;
   animation: toastIn .2s ease-out;
   box-shadow: var(--shadow-lg);

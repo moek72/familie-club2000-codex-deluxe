@@ -1,4 +1,4 @@
-// KPN Rittenregistratie — app logica
+// Moek's Rittenregistratie — app logica
 
 const TRIPS_KEY    = 'moek_ritten_v1';
 const SETTINGS_KEY = 'moek_settings_v1';
@@ -7,6 +7,9 @@ const ACTIVE_KEY   = 'moek_active_rit_v1';
 let trips      = [];
 let settings   = {};
 let activeTrip = null;
+let gpsWatchId = null;
+let gpsErrorShown = false;
+let stopKmManuallyEdited = false;
 
 // ── Opslag ─────────────────────────────────────────────────────────────────
 
@@ -19,6 +22,14 @@ function load() {
 function saveTrips()      { localStorage.setItem(TRIPS_KEY,    JSON.stringify(trips));      }
 function saveSettings()   { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));   }
 function saveActive()     { localStorage.setItem(ACTIVE_KEY,   JSON.stringify(activeTrip)); }
+
+function getLastKmEnd() {
+  for (let i = trips.length - 1; i >= 0; i -= 1) {
+    const kmEnd = Number(trips[i].kmEnd);
+    if (Number.isFinite(kmEnd) && kmEnd >= 0) return kmEnd;
+  }
+  return '';
+}
 
 // ── Tabs ───────────────────────────────────────────────────────────────────
 
@@ -54,8 +65,8 @@ function updateStats() {
   document.getElementById('stat-km-vandaag').textContent     = todayKm;
   document.getElementById('stat-km-totaal').textContent      = totalKm;
 
-  const last = trips.length > 0 ? trips[trips.length - 1].kmEnd : null;
-  document.getElementById('last-km-end').textContent = last ? `${last} km` : '--';
+  const last = getLastKmEnd();
+  document.getElementById('last-km-end').textContent = last !== '' ? `${last} km` : '--';
 }
 
 // ── Status & active trip UI ─────────────────────────────────────────────────
@@ -81,6 +92,7 @@ function updateTripUI() {
       `${activeTrip.kmStart} km`;
     const loc = [activeTrip.startPostcode, activeTrip.startPlaats].filter(Boolean).join(' ');
     document.getElementById('active-vertrek').textContent = loc || '--';
+    document.getElementById('active-gps-distance').textContent = formatGpsKm(getGpsDistanceKm());
   } else {
     dot.classList.remove('active');
     text.textContent = 'Geen actieve rit';
@@ -88,6 +100,24 @@ function updateTripUI() {
     btnS.classList.remove('hidden');
     btnE.classList.add('hidden');
   }
+}
+
+function getGpsDistanceKm() {
+  const km = Number(activeTrip?.gpsDistanceKm || 0);
+  return Number.isFinite(km) && km > 0 ? km : 0;
+}
+
+function formatGpsKm(km) {
+  if (!Number.isFinite(km) || km <= 0) return '--';
+  const value = km < 10 ? km.toFixed(1) : Math.round(km).toString();
+  return `${value.replace('.', ',')} km`;
+}
+
+function getSuggestedKmEnd() {
+  if (!activeTrip) return '';
+  const gpsKm = getGpsDistanceKm();
+  if (gpsKm <= 0) return '';
+  return activeTrip.kmStart + Math.max(1, Math.round(gpsKm));
 }
 
 // ── GPS / reverse geocoding ─────────────────────────────────────────────────
@@ -110,7 +140,7 @@ async function fetchGPS(pcId, plaatsId, btnId) {
 
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1&accept-language=nl`,
-      { headers: { 'User-Agent': 'KPN-Rittenregistratie/1.0' } }
+      { headers: { 'User-Agent': 'Moeks-Rittenregistratie/1.0' } }
     );
 
     if (!res.ok) throw new Error('Nominatim antwoordde niet');
@@ -133,6 +163,102 @@ async function fetchGPS(pcId, plaatsId, btnId) {
   }
 }
 
+function toGpsPoint(position) {
+  return {
+    lat: position.coords.latitude,
+    lon: position.coords.longitude,
+    accuracy: position.coords.accuracy || null,
+    timestamp: position.timestamp || Date.now(),
+  };
+}
+
+function distanceKm(a, b) {
+  const radius = 6371;
+  const toRad = deg => deg * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * radius * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function addGpsPoint(point) {
+  if (!activeTrip) return;
+  if (point.accuracy && point.accuracy > 120) return;
+
+  activeTrip.gpsDistanceKm = Number(activeTrip.gpsDistanceKm || 0);
+
+  if (!activeTrip.startGpsPoint) {
+    activeTrip.startGpsPoint = point;
+  }
+
+  if (!activeTrip.lastGpsPoint) {
+    activeTrip.lastGpsPoint = point;
+    saveActive();
+    updateTripUI();
+    return;
+  }
+
+  const previous = activeTrip.lastGpsPoint;
+  const delta = distanceKm(previous, point);
+  const seconds = Math.max(1, (point.timestamp - previous.timestamp) / 1000);
+  const maxPlausibleDelta = Math.max(0.2, seconds * 0.07);
+
+  if (delta >= 0.005 && delta <= maxPlausibleDelta) {
+    activeTrip.gpsDistanceKm += delta;
+  }
+
+  activeTrip.lastGpsPoint = point;
+  saveActive();
+  updateTripUI();
+  updateKmDiff();
+}
+
+function startGpsTracking() {
+  if (!activeTrip || !navigator.geolocation || gpsWatchId !== null) return;
+
+  gpsWatchId = navigator.geolocation.watchPosition(
+    position => addGpsPoint(toGpsPoint(position)),
+    err => {
+      if (!gpsErrorShown && err.code === 1) {
+        gpsErrorShown = true;
+        toast('GPS staat uit of is geweigerd; km-stand blijft handmatig');
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 20000,
+    }
+  );
+}
+
+function stopGpsTracking() {
+  if (gpsWatchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(gpsWatchId);
+  }
+  gpsWatchId = null;
+}
+
+async function captureCurrentGpsPoint() {
+  if (!activeTrip || !navigator.geolocation) return;
+  try {
+    const position = await new Promise((ok, fail) =>
+      navigator.geolocation.getCurrentPosition(ok, fail, {
+        enableHighAccuracy: true,
+        maximumAge: 3000,
+        timeout: 10000,
+      })
+    );
+    addGpsPoint(toGpsPoint(position));
+  } catch {
+    // GPS blijft optioneel; de tellerstand is altijd handmatig te corrigeren.
+  }
+}
+
 // ── Modal helpers ──────────────────────────────────────────────────────────
 
 function openModal(id) {
@@ -150,7 +276,7 @@ function closeModal(id) {
 function initStartModal() {
   document.getElementById('btn-start').addEventListener('click', () => {
     // Vul beginstand automatisch in met de laatste eindstand
-    const lastKm = trips.length > 0 ? trips[trips.length - 1].kmEnd : '';
+    const lastKm = getLastKmEnd();
     document.getElementById('start-km').value        = lastKm || '';
     document.getElementById('start-postcode').value  = '';
     document.getElementById('start-plaats').value    = '';
@@ -180,8 +306,12 @@ function initStartModal() {
       startPostcode:  document.getElementById('start-postcode').value.trim(),
       startPlaats:    document.getElementById('start-plaats').value.trim(),
       soort:          document.querySelector('input[name="start-soort"]:checked').value,
+      gpsDistanceKm:  0,
+      startGpsPoint:  null,
+      lastGpsPoint:   null,
     };
     saveActive();
+    startGpsTracking();
     closeModal('modal-start');
     updateTripUI();
     updateStats();
@@ -194,35 +324,53 @@ function initStartModal() {
 function updateKmDiff() {
   const end  = parseInt(document.getElementById('stop-km').value, 10);
   const diff = document.getElementById('km-diff');
+  const gpsText = activeTrip && getGpsDistanceKm() > 0 ? ` (GPS gemeten: ${formatGpsKm(getGpsDistanceKm())})` : '';
   if (activeTrip && Number.isFinite(end) && end > activeTrip.kmStart) {
-    diff.textContent = `Gereden kilometers: ${end - activeTrip.kmStart} km`;
+    diff.textContent = `Gereden kilometers: ${end - activeTrip.kmStart} km${gpsText}`;
+  } else if (gpsText) {
+    diff.textContent = `Gereden kilometers: -- km${gpsText}`;
   } else {
     diff.textContent = 'Gereden kilometers: -- km';
   }
 }
 
+function fillSuggestedStopKm() {
+  const input = document.getElementById('stop-km');
+  const suggested = getSuggestedKmEnd();
+  input.value = suggested !== '' ? suggested : '';
+  updateKmDiff();
+}
+
 // ── Beëindig rit ───────────────────────────────────────────────────────────
 
 function initStopModal() {
-  document.getElementById('btn-stop').addEventListener('click', () => {
-    document.getElementById('stop-km').value        = '';
+  document.getElementById('btn-stop').addEventListener('click', async () => {
+    stopKmManuallyEdited = false;
+    fillSuggestedStopKm();
     document.getElementById('stop-postcode').value  = '';
     document.getElementById('stop-plaats').value    = '';
-    updateKmDiff();
     openModal('modal-stop');
     setTimeout(() => document.getElementById('stop-km').focus(), 300);
+    await captureCurrentGpsPoint();
+    if (!stopKmManuallyEdited) fillSuggestedStopKm();
   });
 
   document.getElementById('btn-stop-annuleer').addEventListener('click', () => closeModal('modal-stop'));
   document.querySelector('#modal-stop .modal-backdrop').addEventListener('click', () => closeModal('modal-stop'));
 
-  document.getElementById('stop-km').addEventListener('input', updateKmDiff);
+  document.getElementById('stop-km').addEventListener('input', () => {
+    stopKmManuallyEdited = true;
+    updateKmDiff();
+  });
 
   document.getElementById('btn-gps-stop').addEventListener('click', () =>
     fetchGPS('stop-postcode', 'stop-plaats', 'btn-gps-stop')
   );
 
-  document.getElementById('btn-stop-confirm').addEventListener('click', () => {
+  document.getElementById('btn-stop-confirm').addEventListener('click', async () => {
+    await captureCurrentGpsPoint();
+    if (!stopKmManuallyEdited) fillSuggestedStopKm();
+
     const kmEnd = parseInt(document.getElementById('stop-km').value, 10);
     if (!Number.isFinite(kmEnd) || kmEnd < 0) { toast('Voer een geldige eindstand in'); return; }
     if (kmEnd <= activeTrip.kmStart) { toast('Eindstand moet hoger zijn dan beginstand'); return; }
@@ -232,12 +380,14 @@ function initStopModal() {
       endDateTime:   new Date().toISOString(),
       kmEnd,
       km:            kmEnd - activeTrip.kmStart,
+      gpsKm:         Number(getGpsDistanceKm().toFixed(2)),
       endPostcode:   document.getElementById('stop-postcode').value.trim(),
       endPlaats:     document.getElementById('stop-plaats').value.trim(),
     };
 
     trips.push(rit);
     saveTrips();
+    stopGpsTracking();
     activeTrip = null;
     saveActive();
     closeModal('modal-stop');
@@ -460,6 +610,7 @@ function init() {
   initTabs();
   updateStats();
   updateTripUI();
+  startGpsTracking();
   renderTrips();
   initStartModal();
   initStopModal();
