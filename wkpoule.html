@@ -455,7 +455,12 @@ const ESPN_NL={
   "DR Congo":"Congo","Congo, DR":"Congo","Democratic Republic of Congo":"Congo",
   "Uzbekistan":"Oezbekistan","Colombia":"Colombia",
   "England":"Engeland","Croatia":"Kroatie","Ghana":"Ghana","Panama":"Panama",
-  "Japan":"Japan"
+  "Japan":"Japan",
+  "Korea Republic":"Zuid-Korea","Korea DPR":"Noord-Korea",
+  "United States of America":"Verenigde Staten",
+  "Republic of Ireland":"Ierland","Northern Ireland":"Noord-Ierland",
+  "Côte D'Ivoire":"Ivoorkust","Cote d'Ivoire":"Ivoorkust",
+  "DR Congo":"Congo","Republic of Congo":"Congo"
 };
 
 async function fetchESPN(dateStr){
@@ -470,8 +475,9 @@ async function fetchESPN(dateStr){
         if(!hm||!aw)continue;
         const hnl=ESPN_NL[hm.team.displayName]||hm.team.displayName;
         const anl=ESPN_NL[aw.team.displayName]||aw.team.displayName;
+        // Match op teamnamen (probeer ook omgekeerd)
         const w=W.find(x=>(x.th===hnl&&x.ui===anl)||(x.th===anl&&x.ui===hnl));
-        if(!w)continue;
+        if(!w){console.warn('[ESPN] geen match:',hnl,'vs',anl);continue;}
         const st=comp.status?.type?.state||'pre';
         const hs=parseInt(hm.score)||0,as_=parseInt(aw.score)||0;
         const thSc=(w.th===hnl)?hs:as_,uiSc=(w.ui===anl)?as_:hs;
@@ -483,8 +489,13 @@ async function fetchESPN(dateStr){
 
 async function laadESPN(){
   const nu=new Date();
-  const days=[-1,0,1].map(d=>{const dt=new Date(nu);dt.setDate(dt.getDate()+d);return dt.toISOString().slice(0,10).replace(/-/g,'');});
-  await Promise.all(days.map(fetchESPN));
+  const nuStr=nu.toISOString().slice(0,10);
+  // Haal ALLE speeldagen op die al voorbij zijn (vanaf start toernooi) + morgen
+  const dateSet=new Set();
+  W.forEach(w=>{if(w.iso.slice(0,10)<=nuStr)dateSet.add(w.iso.slice(0,10).replace(/-/g,''));});
+  const morgen=new Date(nu);morgen.setDate(morgen.getDate()+1);
+  dateSet.add(morgen.toISOString().slice(0,10).replace(/-/g,''));
+  await Promise.all([...dateSet].map(fetchESPN));
   if(fbK){
     const ups={};
     for(const [k,sc] of Object.entries(espnScores)){
