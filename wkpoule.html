@@ -39,7 +39,7 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.7rem,7vw,2.6rem);color:
 .tab{flex:1;min-width:68px;padding:10px 5px;text-align:center;font-size:.63rem;font-weight:800;color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;}
 .tab.active{color:var(--goud);border-bottom-color:var(--goud);}
 .ti{font-size:1.05rem;display:block;margin-bottom:2px;}
-.content{position:relative;z-index:1;padding:13px;max-width:640px;margin:0 auto;padding-bottom:80px;}
+.content{position:relative;z-index:1;padding:13px;max-width:640px;margin:0 auto;padding-bottom:90px;}
 .panel{display:none;animation:fi .25s ease;}
 .panel.active{display:block;}
 @keyframes fi{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
@@ -103,13 +103,6 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.7rem,7vw,2.6rem);color:
 .sin:focus{border-color:var(--goud);}
 .sin:disabled{opacity:.4;cursor:not-allowed;}
 .ss{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--dim);text-align:center;}
-.bbar{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);z-index:200;display:none;align-items:center;gap:8px;}
-.bbar.v{display:flex;}
-.sab{padding:12px 34px;background:linear-gradient(135deg,var(--groen),#00a044);color:#000;border:none;border-radius:30px;font-family:'Nunito',sans-serif;font-weight:900;font-size:.9rem;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:0 6px 30px rgba(0,200,83,.5);white-space:nowrap;}
-.sab:active{transform:translateY(2px);box-shadow:0 3px 12px rgba(0,200,83,.35);}
-.rab{width:44px;height:44px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:50%;color:var(--tekst);font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s;-webkit-tap-highlight-color:transparent;flex-shrink:0;}
-.rab:active{transform:scale(.88);}
-.rab.spin{animation:rabspin .6s linear;}
 @keyframes rabspin{to{transform:rotate(360deg)}}
 /* ── Stats modal ── */
 .stmo{position:fixed;inset:0;background:rgba(6,6,16,.93);z-index:550;display:none;align-items:flex-end;justify-content:center;}
@@ -290,9 +283,17 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.7rem,7vw,2.6rem);color:
 .bigcd-live .bigcd-match{color:var(--tekst);}
 .meedoen-btn{display:block;width:100%;padding:14px;border-radius:14px;font-family:'Nunito',sans-serif;font-weight:900;font-size:1rem;cursor:pointer;border:2px dashed rgba(255,215,0,.4);background:rgba(255,215,0,.06);color:var(--goud);transition:all .2s;margin-top:8px;}
 .meedoen-btn:hover{background:rgba(255,215,0,.12);border-color:var(--goud);}
-.fab{position:fixed;bottom:88px;right:14px;height:44px;padding:0 16px;border-radius:22px;background:linear-gradient(135deg,#25D366,#128C7E);border:none;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:900;color:#fff;letter-spacing:.3px;box-shadow:0 4px 18px rgba(37,211,102,.45);z-index:200;transition:transform .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;}
-.fab:active{transform:scale(.93);box-shadow:0 2px 8px rgba(37,211,102,.3);}
-.fab-tip{display:none;}
+/* ── Action footer bar ── */
+.actbar{position:fixed;bottom:0;left:0;right:0;z-index:200;display:flex;align-items:stretch;background:rgba(8,8,20,.93);border-top:1px solid var(--border);backdrop-filter:blur(14px);padding-bottom:env(safe-area-inset-bottom,0px);}
+.actbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;border-right:1px solid rgba(255,255,255,.07);color:var(--dim);cursor:pointer;padding:9px 6px 7px;flex:1;transition:color .15s,background .15s;-webkit-tap-highlight-color:transparent;}
+.actbtn:last-child{border-right:none;}
+.actbtn:active{background:rgba(255,255,255,.06);}
+.actbtn .ai{font-size:1.2rem;line-height:1;}
+.actbtn .al{font-size:.54rem;font-weight:700;letter-spacing:.3px;text-transform:uppercase;}
+.actbtn.sav{color:var(--groen);}
+.actbtn.kijk{color:#25D366;}
+.actbtn.off{opacity:.22;pointer-events:none;}
+.actbtn.spin .ai{display:inline-block;animation:rabspin .6s linear;}
 
 /* ── Modal (uitslagen invoeren) ── */
 .mo{position:fixed;inset:0;background:rgba(6,6,16,.97);z-index:500;display:none;align-items:center;justify-content:center;padding:15px;overflow-y:auto;}
@@ -434,10 +435,10 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.7rem,7vw,2.6rem);color:
   </div>
 </div>
 
-<button class="fab" id="fab" onclick="deelLocatie()">👥 Kijk samen</button>
-<div class="bbar" id="bbar">
-  <button class="rab" id="rab" onclick="verversInvullen()" title="Vernieuwen">🔄</button>
-  <button class="sab" id="sab" onclick="slaOp()">💾 Opslaan</button>
+<div class="actbar">
+  <button class="actbtn off" id="rab" onclick="verversInvullen()"><span class="ai">🔄</span><span class="al">Ververs</span></button>
+  <button class="actbtn sav off" id="sab" onclick="slaOp()"><span class="ai">💾</span><span class="al">Opslaan</span></button>
+  <button class="actbtn kijk" id="fab" onclick="deelLocatie()"><span class="ai">👥</span><span class="al">Kijk samen</span></button>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -815,7 +816,8 @@ function activ(naam){
   document.getElementById('nsec').style.display='none';
   document.getElementById('ssec').style.display='block';
   document.getElementById('wnm').textContent='Hey '+naam+'! 👋';
-  document.getElementById('bbar')?.classList.add('v');
+  document.getElementById('rab')?.classList.remove('off');
+  document.getElementById('sab')?.classList.remove('off');
   laadR();renKvCard();
 }
 window.activ=activ;
@@ -825,7 +827,8 @@ function wisN(){
   document.getElementById('nsec').style.display='block';
   document.getElementById('ssec').style.display='none';
   document.getElementById('wcon').innerHTML='';
-  document.getElementById('bbar')?.classList.remove('v');
+  document.getElementById('rab')?.classList.add('off');
+  document.getElementById('sab')?.classList.add('off');
   document.getElementById('ni').value='';
   Object.values(cdT).forEach(clearInterval);cdT={};
   laadN();renKvCard();
@@ -991,8 +994,8 @@ async function autoSlaOp(){
   if(!n)return;
   try{
     await _update(_ref(_db),ups);
-    const btn=document.getElementById('sab');
-    if(btn){const prev=btn.textContent;btn.textContent='✓ Opgeslagen';btn.style.background='linear-gradient(135deg,#4ade80,#16a34a)';setTimeout(()=>{btn.textContent=prev;btn.style.background='';},2000);}
+    const lbl=document.querySelector('#sab .al');
+    if(lbl){const prev=lbl.textContent;lbl.textContent='Opgeslagen ✓';lbl.style.color='#4ade80';setTimeout(()=>{lbl.textContent=prev;lbl.style.color='';},2000);}
   }catch(e){}
 }
 
