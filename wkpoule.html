@@ -31,8 +31,8 @@ body::after{content:'';position:fixed;inset:0;background:url('assets/trophy.png?
 @keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
 h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.7rem,7vw,2.6rem);color:var(--goud);letter-spacing:3px;line-height:1;text-shadow:0 0 40px rgba(255,215,0,.35);margin:5px 0 3px;}
 .sub{font-size:.73rem;color:var(--dim);letter-spacing:1px;}
-.prijs{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(90deg,#B71C1C,var(--rood));border-radius:30px;padding:6px 18px;margin-top:10px;font-weight:900;font-size:.83rem;color:#fff;box-shadow:0 4px 24px rgba(232,0,61,.45);animation:gp 2.5s ease-in-out infinite;}
-@keyframes gp{0%,100%{box-shadow:0 4px 24px rgba(232,0,61,.45);}50%{box-shadow:0 4px 40px rgba(232,0,61,.75);}}
+.prijs{display:inline-flex;align-items:center;gap:5px;background:rgba(180,0,40,.18);border:1px solid rgba(232,0,61,.35);border-radius:20px;padding:4px 13px;margin-top:8px;font-weight:700;font-size:.72rem;color:rgba(255,120,120,.9);white-space:nowrap;}
+.prijs .pi{font-size:.8rem;}
 .sbar{display:flex;align-items:center;justify-content:center;gap:6px;padding:5px;font-size:.68rem;font-weight:700;color:var(--dim);border-bottom:1px solid var(--border);}
 .tabs{position:sticky;top:0;z-index:100;display:flex;background:rgba(6,6,16,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;}
 .tabs::-webkit-scrollbar{display:none;}
@@ -179,9 +179,9 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.7rem,7vw,2.6rem);color:
 .ow .om2{font-weight:900;font-size:.9rem;color:var(--oranje);}
 .sd{display:flex;align-items:center;gap:7px;margin:6px 0 11px;color:var(--dim);font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
 .sd::before,.sd::after{content:'';flex:1;height:1px;background:var(--border);}
-.toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--groen);color:#000;padding:9px 19px;border-radius:30px;font-weight:900;font-size:.81rem;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.5);max-width:90vw;text-align:center;}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(100px);background:rgba(10,10,20,.92);color:var(--tekst);border:1px solid var(--border);padding:8px 18px;border-radius:20px;font-weight:700;font-size:.78rem;z-index:999;transition:transform .25s cubic-bezier(.34,1.56,.64,1),opacity .25s;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.6);max-width:90vw;text-align:center;pointer-events:none;backdrop-filter:blur(8px);}
 .toast.show{transform:translateX(-50%) translateY(0);}
-.toast.e{background:var(--rood);color:#fff;}
+.toast.e{background:rgba(180,0,40,.9);border-color:var(--rood);color:#fff;}
 .leeg{text-align:center;padding:34px 18px;color:var(--dim);}
 .li{font-size:2.6rem;display:block;margin-bottom:9px;}
 .leeg p{font-size:.83rem;}
@@ -324,7 +324,7 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.7rem,7vw,2.6rem);color:
   <div class="logo"><img src="assets/jaikaran-logo.png?v=2" alt="Jaikaran Family"></div>
   <h1>Jaikaran WK Poule 2026</h1>
   <div class="sub">11 JUN – 19 JUL · VS · CANADA · MEXICO · 104 WEDSTRIJDEN</div>
-  <div class="prijs"><img src="assets/jaikaran-logo.png" alt="" style="height:28px;width:auto;vertical-align:middle;margin-right:6px;filter:drop-shadow(0 0 6px rgba(255,215,0,.5))">Hoofdprijs: Geheel verzorgde BBQ door Kawita</div>
+  <div class="prijs"><span class="pi">🍖</span> Hoofdprijs: BBQ door Kawita · winnaar 19 jul</div>
   <div id="cdban" style="margin-top:10px;min-height:28px;"></div>
 </div>
 
