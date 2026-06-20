@@ -1466,6 +1466,12 @@ function renKvCard(){
       <button class="btn bg" onclick="slaKvOp()" style="width:100%">${mijnKeuze?'✏️ Keuze aanpassen →':'💾 Opslaan →'}</button>
     </div>`;
   }
+  // Alert wiring: pulse card + show tab dot when no choice before deadline
+  const needsAlert=sp&&!deadlinePast&&!mijnKeuze;
+  const kvc=card.querySelector('.kvcard');
+  if(kvc){needsAlert?kvc.classList.add('alert'):kvc.classList.remove('alert');}
+  const dot=document.getElementById('dot-inv');
+  if(dot)dot.style.display=needsAlert?'':'none';
 }
 
 async function slaKvOp(){
