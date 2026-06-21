@@ -1189,7 +1189,7 @@ function renRes(){
     return new Date(w.iso)<now||espn?.status==='in'||espn?.status==='post';
   }).sort((a,b)=>new Date(b.iso)-new Date(a.iso));
   if(!past.length){el.innerHTML='<div class="leeg"><span class="li">📭</span><p>Nog geen wedstrijden gespeeld</p></div>';return;}
-  const spelers=Object.entries(liveAll).filter(([k])=>k!=='_r'&&k!=='_k');
+  const spelers=Object.entries(liveAll).filter(([k])=>k!=='_r'&&k!=='_k'&&k!=='_bbq'&&k!=='_quiz');
   let h='',lastDay='';
   past.forEach(w=>{
     const key=`w${w.id}`;
@@ -1935,7 +1935,7 @@ window.smoStuur=smoStuur;
 
 function deelRanglijst(){
   const url=window.location.href.split('#')[0]+'#rang';
-  const sc=Object.entries(liveAll).filter(([k])=>k!=='_r'&&k!=='_k').map(([naam,sd])=>{
+  const sc=Object.entries(liveAll).filter(([k])=>k!=='_r'&&k!=='_k'&&k!=='_bbq'&&k!=='_quiz').map(([naam,sd])=>{
     let pt=0,ex=0;
     W.forEach(w=>{
       const v=sd[`w${w.id}`],e=liveRes[`w${w.id}`];if(!v||v.t===undefined||!e)return;
