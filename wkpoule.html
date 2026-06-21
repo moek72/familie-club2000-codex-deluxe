@@ -726,7 +726,7 @@ const QUIZ_Q=[
   {v:"In welk jaar werden gele en rode kaarten ingevoerd op het WK?",o:["1966","1970","1974","1978"],a:1},
   {v:"Hoeveel WK-titels heeft Duitsland (inclusief West-Duitsland)?",o:["3","4","5","6"],a:1},
   {v:"Welk land verloor drie WK finales zonder ooit te winnen (1974, 1978, 2010)?",o:["Duitsland","Argentinië","Italië","Nederland"],a:3},
-  {v:"Hoe heet de prijs voor de beste keeper van het WK?",o:["Golden Boot","Golden Glove","Golden Ball","Lev Yashin Award"],a:1},
+  {v:"Hoe heet de prijs voor de beste keeper van het WK?",o:["Golden Boot","Golden Glove","Golden Ball","Lev Yashin Award"],a:3},
   {v:"Hoe heet de prijs voor de topscorer van het WK?",o:["Golden Glove","Golden Boot","Golden Ball","Adidas Award"],a:1},
   {v:"Hoe heet de prijs voor de beste speler van het WK?",o:["Golden Glove","Golden Boot","Golden Ball","FIFA Award"],a:2},
   {v:"Hoeveel teams doen mee aan WK 2026?",o:["32","40","48","64"],a:2},
@@ -1935,14 +1935,16 @@ function renQuiz(saved){
     const score=saved.score??0;
     const nSaved=saved.nVragen||3;
     const antw=saved.antwoorden||[];
-    const juist=saved.juist||vragen.map(q=>q.a); // fallback voor oude saves
+    // Gebruik opgeslagen vragen als beschikbaar (voorkomt mismatch bij gewijzigde stand)
+    const weergaveVragen=(saved.vragen&&saved.vragen.length)?saved.vragen:vragen;
+    const juist=saved.juist||weergaveVragen.map(q=>q.a);
     const msg=score===nSaved?'🎉 Perfect!':score>=nSaved*0.6?'👍 Goed gedaan!':score>0?'💪 Morgen beter!':'😅 Helaas, morgen weer';
     let h=`<div style="text-align:center;padding:10px 0 14px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--goud);line-height:1">${score}/${nSaved}</div>
       <div style="font-size:.7rem;color:var(--dim);margin-top:4px">${msg} · Nieuwe vragen morgen</div>
     </div>`;
-    // Toon alle vragen met resultaat (gebruik opgeslagen juist-indices)
-    vragen.slice(0,nSaved).forEach((q,i)=>{
+    // Toon alle vragen met resultaat (gebruik opgeslagen vragen+indices)
+    weergaveVragen.slice(0,nSaved).forEach((q,i)=>{
       const ja=juist[i]??q.a;
       const correct=antw[i]===ja;
       h+=`<div class="quiz-q">`;
@@ -2040,7 +2042,8 @@ async function autoSubmitQuiz(){
   const score=_quizAntw.reduce((n,a,i)=>n+(a!==null&&a!==-1&&a===juist[i]?1:0),0);
   const nV=vragen.length;
   try{
-    await _set(_ref(_db,`v/_quiz/${sp}/${quizDatum()}`),{score,antwoorden:_quizAntw,juist,nVragen:nV});
+    const vragenSnap=vragen.map(q=>({v:q.v,o:q.o,a:q.a}));
+    await _set(_ref(_db,`v/_quiz/${sp}/${quizDatum()}`),{score,antwoorden:_quizAntw,juist,nVragen:nV,vragen:vragenSnap});
     const totSnap=await _get(_ref(_db,`v/_quiz/${sp}/totaal`));
     await _set(_ref(_db,`v/_quiz/${sp}/totaal`),(totSnap.exists()?totSnap.val():0)+score);
     const msg=score===nV?'Perfect! 🎉':score>=Math.ceil(nV*0.6)?'Goed gedaan 👍':'Morgen beter 💪';
