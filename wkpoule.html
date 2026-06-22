@@ -2003,9 +2003,9 @@ async function ontdekTwijfelaars(){
   _openSd(_sdHdr('🔀 Twijfelaars')+'<div style="padding:1.2rem;text-align:center;color:var(--dim)">⏳ Backups laden...</div>');
   const backups=[];
   const base=window.location.href.replace(/\/[^/]*$/,'')+'/backups';
-  const now=new Date();
-  for(let i=1;i<=14;i++){
-    const d=new Date(now-i*86400000),ds=d.toISOString().slice(0,10);
+  const now=new Date(),start=new Date('2026-06-11');
+  for(let d=new Date(now-86400000);d>=start;d=new Date(d-86400000)){
+    const ds=d.toISOString().slice(0,10);
     try{const r=await fetch(`${base}/backup-${ds}.json`,{cache:'no-store'});if(r.ok){const j=await r.json();backups.push({ds,data:j.v||j});}}catch(e){}
   }
   if(!backups.length){
