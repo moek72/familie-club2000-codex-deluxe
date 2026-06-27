@@ -202,6 +202,11 @@ body.lang-en .wc.lk::after{content:'Closed';}
 .fbar{display:flex;align-items:center;gap:8px;padding:2px 0 12px;}
 .fsel{flex:1;background:var(--card2);border:2px solid var(--border);border-radius:11px;padding:9px 12px;color:var(--tekst);font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23FFD700' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
 .fsel:focus{border-color:var(--goud);}
+.fchips{display:flex;gap:6px;padding:2px 0 8px;overflow-x:auto;scrollbar-width:none;}
+.fchips::-webkit-scrollbar{display:none;}
+.fchip{flex:1;min-width:max-content;white-space:nowrap;background:var(--card2);border:2px solid var(--border);border-radius:11px;padding:8px 12px;color:var(--dim);font-family:'Nunito',sans-serif;font-size:.74rem;font-weight:900;cursor:pointer;transition:all .15s;text-align:center;}
+.fchip:hover{border-color:var(--goud);}
+.fchip.active{background:var(--goud);border-color:var(--goud);color:#1a1a1a;}
 .flegend{display:flex;gap:9px;flex-wrap:wrap;font-size:.62rem;font-weight:700;color:var(--dim);margin-bottom:10px;}
 .flegend span{display:inline-flex;align-items:center;gap:4px;}
 .fdot{width:8px;height:8px;border-radius:50%;display:inline-block;}
@@ -410,6 +415,12 @@ body.lang-en .wc.lk::after{content:'Closed';}
         <div class="ais2" data-i18n="ai-sub">Laat AI alle lege wedstrijden automatisch invullen</div>
         <div class="ail" id="ail"><div class="sp"></div><span data-i18n="ai-busy">AI berekent...</span></div>
         <button class="btn bai" id="aib" onclick="aiVul()"><span data-i18n="ai-btn">🎲 Laat AI alles invullen</span></button>
+      </div>
+      <div class="fchips" id="fchips">
+        <div class="fchip active" data-f="all" onclick="chipFilter('all',this)">📋 Alle</div>
+        <div class="fchip" data-f="today" onclick="chipFilter('today',this)">📅 Vandaag</div>
+        <div class="fchip" data-f="group" onclick="chipFilter('group',this)">⚽ Groepsfase</div>
+        <div class="fchip" data-f="knockout" onclick="chipFilter('knockout',this)">🏆 Knockout</div>
       </div>
       <div class="fbar">
         <select class="fsel" id="fsel" onchange="zetFilter(this.value)"></select>
@@ -1036,8 +1047,20 @@ function bouwSelect(){
   const items=[['all','📋 Alle wedstrijden'],['today','📅 Vandaag'],...VLG.map(g=>[g,KORT[g]||g])];
   el.innerHTML=items.map(([k,l])=>`<option value="${k}">${l}</option>`).join('');
 }
+const GROEP_FASEN=['A','B','C','D','E','F','G','H','I','J','K','L'];
+const KO_FASEN=['X','R','KF','HF','3P','FIN'];
 function zetFilter(f){filt=f;pasFilterToe();}
 window.zetFilter=zetFilter;
+function chipFilter(f){
+  filt=f;
+  const sel=document.getElementById('fsel');
+  if(sel)sel.value=(f==='all'||f==='today')?f:'all';
+  pasFilterToe();
+}
+window.chipFilter=chipFilter;
+function syncChips(){
+  document.querySelectorAll('#fchips .fchip').forEach(c=>c.classList.toggle('active',c.dataset.f===filt));
+}
 function pasFilterToe(){
   const vandaagStr=new Date().toISOString().slice(0,10);
   document.querySelectorAll('#wcon .daysec').forEach(sec=>{
@@ -1045,12 +1068,17 @@ function pasFilterToe(){
     sec.querySelectorAll('.wc').forEach(c=>{
       const id=parseInt(c.id.slice(1));
       const w=W.find(x=>x.id===id);
-      const show=filt==='all'||(filt==='today'&&w.iso.slice(0,10)===vandaagStr)||(filt===w.g);
+      const show=filt==='all'
+        ||(filt==='today'&&w.iso.slice(0,10)===vandaagStr)
+        ||(filt==='group'&&GROEP_FASEN.includes(w.g))
+        ||(filt==='knockout'&&KO_FASEN.includes(w.g))
+        ||(filt===w.g);
       c.style.display=show?'':'none';
       if(show)zicht++;
     });
     sec.style.display=zicht?'':'none';
   });
+  syncChips();
 }
 
 function sCD(w){
