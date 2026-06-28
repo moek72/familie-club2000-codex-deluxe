@@ -215,6 +215,14 @@ body.lang-en .wc.lk::after{content:'Closed';}
 .fasecnt{margin-left:auto;font-size:.66rem;font-weight:800;color:var(--dim);}
 .fasewrap{padding:6px 8px 2px;}
 .fasegroep.collapsed .fasewrap{display:none;}
+.penwrap{margin:10px 4px 2px;padding:10px 12px;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.22);border-radius:11px;}
+.penlbl{font-size:.74rem;font-weight:800;color:var(--tekst);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.penbon{background:var(--goud);color:#1a1a1a;font-size:.6rem;font-weight:900;padding:1px 6px;border-radius:8px;}
+.penopts{display:flex;gap:8px;}
+.penbtn{flex:1;background:var(--card2);border:2px solid var(--border);border-radius:10px;padding:9px 8px;color:var(--tekst);font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;transition:all .15s;}
+.penbtn:hover:not(:disabled){border-color:var(--goud);}
+.penbtn.sel{background:var(--goud);border-color:var(--goud);color:#1a1a1a;}
+.penbtn:disabled{opacity:.55;cursor:default;}
 .flegend{display:flex;gap:9px;flex-wrap:wrap;font-size:.62rem;font-weight:700;color:var(--dim);margin-bottom:10px;}
 .flegend span{display:inline-flex;align-items:center;gap:4px;}
 .fdot{width:8px;height:8px;border-radius:50%;display:inline-block;}
@@ -486,10 +494,12 @@ body.lang-en .wc.lk::after{content:'Closed';}
     <div class="ic"><h3>📐 Punten</h3>
       <div class="pr"><span>⚽ Juiste winnaar / gelijkspel</span><span class="pb">2 pt</span></div>
       <div class="pr"><span>🎯 Exacte score</span><span class="pb">5 pt</span></div>
+      <div class="pr"><span>⚽ Penaltywinnaar goed (knockout)</span><span class="pb">+2 pt</span></div>
       <div class="pr"><span>🏆 Kampioensland goed</span><span class="pb">+10 pt</span></div>
       <div class="pr"><span>❌ Fout</span><span class="pb">0 pt</span></div>
       <p style="font-size:.75rem;color:var(--dim);margin-top:10px;line-height:1.5">💡 Voorbeeld: jij voorspelt <strong style="color:var(--tekst)">1-1</strong> en de stand is <strong style="color:var(--tekst)">0-0</strong> → dat is +2 (beide zijn gelijkspel). Pas als de eindstand <strong style="color:var(--tekst)">1-1</strong> is, krijg je +5.</p>
       <p style="font-size:.75rem;color:var(--dim);margin-top:6px;line-height:1.5">📊 Tijdens een live wedstrijd zie je een <em>live projectie</em> van je punten op basis van de huidige stand.</p>
+      <p style="font-size:.75rem;color:var(--dim);margin-top:6px;line-height:1.5">⚽ <strong style="color:var(--tekst)">Penalty's:</strong> voorspel je bij een knockout-wedstrijd een gelijkspel, dan verschijnt er een keuze wie de penalty's wint. Eindigt de wedstrijd echt op strafschoppen en heb je de winnaar goed → <strong style="color:var(--tekst)">+2 pt</strong> bovenop je punten.</p>
     </div>
     <div class="ic"><h3>🇳🇱 Oranje</h3>
       <div class="ow"><div class="od">14 juni · 22:00</div><div class="om2">🇳🇱 Nederland vs Japan 🇯🇵</div></div>
@@ -846,7 +856,12 @@ async function laadESPN(){
   if(fbK){
     const ups={};
     for(const [k,sc] of Object.entries(espnScores)){
-      if(sc.status==='post')ups[`v/_r/${k}`]={t:sc.th,u:sc.ui};
+      if(sc.status!=='post')continue;
+      const o={t:sc.th,u:sc.ui};
+      const w=W.find(x=>x.id===+k.slice(1));
+      // Knockout-wedstrijd die op penalty's eindigde: bewaar de echte penaltywinnaar
+      if(w&&KO_FASEN.includes(w.g)&&sc.th===sc.ui&&sc.adv)o.pw=sc.adv;
+      ups[`v/_r/${k}`]=o;
     }
     // Auto-detect kampioen uit finale (w104)
     const fin=espnScores['w104'];
@@ -1059,6 +1074,13 @@ function renW(sd){
     }
     h+=`<div class="tg"><div class="tn ho">${w.th}</div><div class="vs">VS</div><div class="tn">${w.ui}</div></div>`;
     h+=`<div class="si"><input type="number" class="sin" id="t${w.id}" min="0" max="20" placeholder="?" value="${tv}" ${lk?'disabled':''} oninput="sgw(${w.id})"><div class="ss">-</div><input type="number" class="sin" id="u${w.id}" min="0" max="20" placeholder="?" value="${uv}" ${lk?'disabled':''} oninput="sgw(${w.id})"></div>`;
+    // Penalty-keuze: alleen knockout, alleen als de teams bekend zijn (geen W73-placeholder)
+    const _ph=t=>/^(W\d|Winnaar |Verliezer |Winnaar Poule|2e Poule|3e )/.test(t);
+    if(KO_FASEN.includes(w.g)&&!_ph(w.th)&&!_ph(w.ui)){
+      const draw=tv!==''&&uv!==''&&parseInt(tv)===parseInt(uv);
+      const pk=sv.p||'';
+      h+=`<div class="penwrap" id="pw${w.id}" style="display:${draw?'block':'none'}"><div class="penlbl">⚽ Wie wint de penalty's? <span class="penbon">+2</span></div><div class="penopts"><button type="button" class="penbtn${pk===w.th?' sel':''}" ${lk?'disabled':''} onclick="kiesPen(${w.id},'th')">${w.th}</button><button type="button" class="penbtn${pk===w.ui?' sel':''}" ${lk?'disabled':''} onclick="kiesPen(${w.id},'ui')">${w.ui}</button></div></div>`;
+    }
     if((isLive||isDone)&&tv!==''&&uv!==''){
       const e=liveRes[key]||(espn&&espn.status!=='pre'?{t:espn.th,u:espn.ui}:null);
       if(e&&e.t!==undefined){
@@ -1181,11 +1203,30 @@ function sgw(id){
   const c=document.getElementById(`c${id}`);
   const t=document.getElementById(`t${id}`).value,u=document.getElementById(`u${id}`).value;
   if(t!==''&&u!=='')c.classList.add('hi');else c.classList.remove('hi');
+  // Knockout-penalty-veld tonen bij gelijkspel, verbergen + keuze wissen bij niet-gelijk
+  const pw=document.getElementById('pw'+id);
+  if(pw){
+    const draw=t!==''&&u!==''&&parseInt(t)===parseInt(u);
+    pw.style.display=draw?'block':'none';
+    if(!draw&&userSd[`w${id}`]&&userSd[`w${id}`].p){userSd[`w${id}`].p=null;pw.querySelectorAll('.penbtn').forEach(b=>b.classList.remove('sel'));}
+  }
   upVGL();
   clearTimeout(_autoSaveT);
   _autoSaveT=setTimeout(autoSlaOp,1500);
 }
 window.sgw=sgw;
+// Penalty-winnaar kiezen (toggle): slaat het gekozen land op in de voorspelling
+function kiesPen(id,side){
+  const w=W.find(x=>x.id===id);if(!w)return;
+  const naam=side==='th'?w.th:w.ui;
+  const key=`w${id}`;
+  if(!userSd[key])userSd[key]={};
+  userSd[key].p=userSd[key].p===naam?null:naam;
+  const wrap=document.getElementById('pw'+id);
+  if(wrap)wrap.querySelectorAll('.penbtn').forEach((b,i)=>b.classList.toggle('sel',userSd[key].p===(i===0?w.th:w.ui)));
+  clearTimeout(_autoSaveT);_autoSaveT=setTimeout(autoSlaOp,400);
+}
+window.kiesPen=kiesPen;
 
 async function autoSlaOp(){
   if(!sp||!fbK)return;
@@ -1193,7 +1234,13 @@ async function autoSlaOp(){
   W.forEach(w=>{
     const te=document.getElementById(`t${w.id}`),ue=document.getElementById(`u${w.id}`);
     if(!te||!ue||te.disabled)return;
-    if(te.value!==''&&ue.value!==''){ups[`v/${sp}/w${w.id}`]={t:parseInt(te.value),u:parseInt(ue.value),ai:te.dataset.ai==='true'};n++;}
+    if(te.value!==''&&ue.value!==''){
+      const o={t:parseInt(te.value),u:parseInt(ue.value),ai:te.dataset.ai==='true'};
+      const cur=userSd[`w${w.id}`];
+      // Penalty-keuze bewaren, alleen bij knockout-gelijkspel
+      if(cur&&cur.p&&KO_FASEN.includes(w.g)&&parseInt(te.value)===parseInt(ue.value))o.p=cur.p;
+      ups[`v/${sp}/w${w.id}`]=o;n++;
+    }
   });
   if(!n)return;
   try{
@@ -1280,6 +1327,7 @@ function startLive(){
         if(v.t===e.t&&v.u===e.u){pt+=5;ex++;}
         else if((v.t>v.u&&e.t>e.u)||(v.t<v.u&&e.t<e.u)||(v.t===v.u&&e.t===e.u)){pt+=2;goed++;}
         else{fout++;}
+        pt+=_penBonus(v,e);
       });
       const kv=_kampVoorsp[naam]||null;
       if(_echteKampioen&&kv===_echteKampioen)pt+=KAMPIOEN_BONUS;
@@ -1779,6 +1827,7 @@ function toonStats(naam){
     else if(v.t===e.t&&v.u===e.u){pt+=5;ex++;badge='🎯';cls='ex';myPred=`${v.t}-${v.u}`;}
     else if((v.t>v.u&&e.t>e.u)||(v.t<v.u&&e.t<e.u)||(v.t===v.u&&e.t===e.u)){pt+=2;goed++;badge='✅';cls='gd';myPred=`${v.t}-${v.u}`;}
     else{fout++;badge='❌';cls='ft';myPred=v?`${v.t}-${v.u}`:'–';}
+    const _pb=_penBonus(v,e);if(_pb){pt+=_pb;badge+='⚽';}
     matches.push({w,e,cls,badge,myPred});
   });
   if(echteKampioen&&kv===echteKampioen)pt+=KAMPIOEN_BONUS;
@@ -1918,7 +1967,8 @@ function ontdekOranje(){
     let pt=0,ex=0;
     gespeeld.forEach(w=>{const v=sd[`w${w.id}`],e=res[`w${w.id}`];if(!v||v.t===undefined)return;
       if(v.t===e.t&&v.u===e.u){pt+=5;ex++;}
-      else if((v.t>v.u&&e.t>e.u)||(v.t<v.u&&e.t<e.u)||(v.t===v.u&&e.t===e.u))pt+=2;});
+      else if((v.t>v.u&&e.t>e.u)||(v.t<v.u&&e.t<e.u)||(v.t===v.u&&e.t===e.u))pt+=2;
+      pt+=_penBonus(v,e);});
     rows.push({naam,pt,ex});
   });
   rows.sort((a,b)=>b.pt-a.pt||b.ex-a.ex);
@@ -1935,12 +1985,12 @@ function ontdekH2H(a,b){
   b=b&&namen.includes(b)?b:(namen[1]||namen[0]);
   const sdA=liveAll[a]||{},sdB=liveAll[b]||{};
   const scoreOf=sd=>{let pt=0,ex=0;W.forEach(w=>{const v=sd[`w${w.id}`],e=res[`w${w.id}`];if(!e||!v||v.t===undefined)return;
-    if(v.t===e.t&&v.u===e.u){pt+=5;ex++;}else if((v.t>v.u&&e.t>e.u)||(v.t<v.u&&e.t<e.u)||(v.t===v.u&&e.t===e.u))pt+=2;});return{pt,ex};};
+    if(v.t===e.t&&v.u===e.u){pt+=5;ex++;}else if((v.t>v.u&&e.t>e.u)||(v.t<v.u&&e.t<e.u)||(v.t===v.u&&e.t===e.u))pt+=2;pt+=_penBonus(v,e);});return{pt,ex};};
   const sA=scoreOf(sdA),sB=scoreOf(sdB);
   // Per gespeelde wedstrijd: wie pakte meer punten
   let winA=0,winB=0;
   W.forEach(w=>{const e=res[`w${w.id}`];if(!e)return;
-    const p=(sd)=>{const v=sd[`w${w.id}`];if(!v||v.t===undefined)return 0;if(v.t===e.t&&v.u===e.u)return 5;if((v.t>v.u&&e.t>e.u)||(v.t<v.u&&e.t<e.u)||(v.t===v.u&&e.t===e.u))return 2;return 0;};
+    const p=(sd)=>{const v=sd[`w${w.id}`];if(!v||v.t===undefined)return 0;let pp=0;if(v.t===e.t&&v.u===e.u)pp=5;else if((v.t>v.u&&e.t>e.u)||(v.t<v.u&&e.t<e.u)||(v.t===v.u&&e.t===e.u))pp=2;return pp+_penBonus(v,e);};
     const pa=p(sdA),pb=p(sdB);if(pa>pb)winA++;else if(pb>pa)winB++;});
   const opt=(sel)=>namen.map(n=>`<option ${n===sel?'selected':''}>${n.replace(/"/g,'')}</option>`).join('');
   const kol=(naam,s,wins,winner)=>`<div style="flex:1;text-align:center;padding:10px;background:${winner?'rgba(74,222,128,.1)':'rgba(255,255,255,.04)'};border:1px solid ${winner?'rgba(74,222,128,.4)':'var(--border)'};border-radius:12px">
@@ -2003,8 +2053,10 @@ function ontdekKampioen(){
     `<p style="color:var(--dim);font-size:.7rem;margin:0 0 12px">Welk land deelnemers als wereldkampioen kozen</p>`+
     _sdBars(sorted.map(([land,n])=>{const correct=echteKampioen&&land===echteKampioen;return{label:land+(correct?' ✅':''),sub:`${n}x · ${Math.round(n/tot*100)}%`,n,kleur:correct?'#4ade80':'var(--goud)'};}),'var(--goud)'));
 }
-// Gedeelde punten-helper: 5=exact, 2=goede uitslag, 0=fout, null=niet ingevuld
-function _puntenVoor(v,e){if(!v||v.t===undefined||!e||e.t===undefined)return null;if(v.t===e.t&&v.u===e.u)return 5;if((v.t>v.u&&e.t>e.u)||(v.t<v.u&&e.t<e.u)||(v.t===v.u&&e.t===e.u))return 2;return 0;}
+// Penalty-bonus: +2 als de gekozen penaltywinnaar (v.p) klopt met de echte (e.pw)
+function _penBonus(v,e){return(v&&e&&v.p&&e.pw&&v.p===e.pw)?2:0;}
+// Gedeelde punten-helper: 5=exact, 2=goede uitslag, 0=fout, +penaltybonus, null=niet ingevuld
+function _puntenVoor(v,e){if(!v||v.t===undefined||!e||e.t===undefined)return null;let p=0;if(v.t===e.t&&v.u===e.u)p=5;else if((v.t>v.u&&e.t>e.u)||(v.t<v.u&&e.t<e.u)||(v.t===v.u&&e.t===e.u))p=2;return p+_penBonus(v,e);}
 function _gespeeldSorted(){const res=liveAll._r||{};return W.filter(w=>res[`w${w.id}`]&&res[`w${w.id}`].t!==undefined).sort((a,b)=>new Date(a.iso)-new Date(b.iso));}
 // Voorspel-persoonlijkheid op basis van ingevulde uitslagen
 function _persona(sd){
