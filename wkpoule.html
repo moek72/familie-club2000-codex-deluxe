@@ -207,6 +207,14 @@ body.lang-en .wc.lk::after{content:'Closed';}
 .fchip{flex:1;min-width:max-content;white-space:nowrap;background:var(--card2);border:2px solid var(--border);border-radius:11px;padding:8px 12px;color:var(--dim);font-family:'Nunito',sans-serif;font-size:.74rem;font-weight:900;cursor:pointer;transition:all .15s;text-align:center;}
 .fchip:hover{border-color:var(--goud);}
 .fchip.active{background:var(--goud);border-color:var(--goud);color:#1a1a1a;}
+.fasegroep{margin-bottom:10px;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.fasehdr{display:flex;align-items:center;gap:8px;padding:11px 13px;background:var(--card2);cursor:pointer;font-weight:900;font-size:.82rem;color:var(--tekst);user-select:none;}
+.fasehdr:hover{background:rgba(255,255,255,.06);}
+.fasehdr .fci{font-size:.7rem;color:var(--goud);transition:transform .2s;}
+.fasegroep.collapsed .fci{transform:rotate(-90deg);}
+.fasecnt{margin-left:auto;font-size:.66rem;font-weight:800;color:var(--dim);}
+.fasewrap{padding:6px 8px 2px;}
+.fasegroep.collapsed .fasewrap{display:none;}
 .flegend{display:flex;gap:9px;flex-wrap:wrap;font-size:.62rem;font-weight:700;color:var(--dim);margin-bottom:10px;}
 .flegend span{display:inline-flex;align-items:center;gap:4px;}
 .fdot{width:8px;height:8px;border-radius:50%;display:inline-block;}
@@ -1016,8 +1024,10 @@ function renW(sd){
     const te=document.getElementById(`t${w.id}`),ue=document.getElementById(`u${w.id}`);
     if(te&&!te.disabled&&(te.value!==''||ue?.value!==''))unsaved[w.id]={t:te.value,u:ue?.value??''};
   });
-  const sorted=[...W].sort((a,b)=>new Date(a.iso)-new Date(b.iso));
-  let h='',lastDay='';
+  const sorted=[...W].sort((a,b)=>faseIdx(a.g)-faseIdx(b.g)||new Date(a.iso)-new Date(b.iso));
+  const faseStats={};
+  sorted.forEach(w=>{const fi=faseIdx(w.g);(faseStats[fi]||(faseStats[fi]={t:0,done:0})).t++;if(new Date(w.iso)<new Date())faseStats[fi].done++;});
+  let h='',lastDay='',lastFase=-1;
   sorted.forEach(w=>{
     const key=`w${w.id}`;
     const sv=sd[key]||{};
@@ -1027,6 +1037,15 @@ function renW(sd){
     const isLive=espn?.status==='in';
     const isDone=espn?.status==='post'||(lk&&!espn);
     const statusCls=isLive?'live':isDone?'done':'';
+    const _fi=faseIdx(w.g);
+    if(_fi!==lastFase){
+      if(lastDay){h+='</div>';lastDay='';}
+      if(lastFase!==-1)h+='</div></div>';
+      const _st=faseStats[_fi],_comp=_st.done===_st.t;
+      const _coll=(_fi in faseOverride)?!faseOverride[_fi]:_comp;
+      h+=`<div class="fasegroep${_coll?' collapsed':''}" data-fase="${_fi}" data-defcoll="${_comp?1:0}"><div class="fasehdr" onclick="toggleFase(${_fi})"><span class="fci">▾</span>${FASE_LABEL[_fi]}<span class="fasecnt">${_st.done}/${_st.t} gespeeld</span></div><div class="fasewrap" id="fw-${_fi}">`;
+      lastFase=_fi;
+    }
     if(w.d!==lastDay){if(lastDay)h+='</div>';h+=`<div class="daysec" data-d="${w.d}"><div class="daghdr">📅 ${w.d}</div>`;lastDay=w.d;}
     h+=`<div class="wc ${hi?'hi':''} ${w.o?'om':''} ${lk?'lk':''} ${statusCls}" id="c${w.id}" data-g="${w.g}">`;
     h+=`<div class="wm"><span class="mc">⏰ ${w.t}</span><span class="mc">${LBL[w.g]||w.g}</span>`;
@@ -1053,6 +1072,7 @@ function renW(sd){
     h+=`</div>`;
   });
   if(lastDay)h+='</div>';
+  if(lastFase!==-1)h+='</div></div>';
   document.getElementById('wcon').innerHTML=h;
   // Herstel onopgeslagen waarden na herrenderen
   Object.entries(unsaved).forEach(([id,v])=>{
@@ -1075,6 +1095,12 @@ function bouwSelect(){
 }
 const GROEP_FASEN=['A','B','C','D','E','F','G','H','I','J','K','L'];
 const KO_FASEN=['X','R','KF','HF','3P','FIN'];
+// ── Inklapbare ronde-secties (accordion) ──
+const FASE_LABEL=['⚽ Groepsfase','🏆 1/16 finales','🏆 1/8 finales','⚡ Kwartfinales','🔥 Halve finales','🏆 Finale & troostfinale'];
+function faseIdx(g){return GROEP_FASEN.includes(g)?0:({X:1,R:2,KF:3,HF:4,'3P':5,FIN:5}[g]??0);}
+let faseOverride={};
+function toggleFase(idx){const g=document.querySelector(`.fasegroep[data-fase="${idx}"]`);if(!g)return;const coll=g.classList.toggle('collapsed');faseOverride[idx]=!coll;}
+window.toggleFase=toggleFase;
 function zetFilter(f){filt=f;pasFilterToe();}
 window.zetFilter=zetFilter;
 function chipFilter(f){
@@ -1118,6 +1144,15 @@ function pasFilterToe(){
       if(show)zicht++;
     });
     sec.style.display=zicht?'':'none';
+  });
+  // Inklap-secties: bij een actief filter de relevante rondes openklappen, lege verbergen
+  document.querySelectorAll('#wcon .fasegroep').forEach(g=>{
+    const idx=g.dataset.fase;
+    const anyVis=[...g.querySelectorAll('.wc')].some(c=>c.style.display!=='none');
+    let coll;
+    if(filt==='all'){coll=(idx in faseOverride)?!faseOverride[idx]:g.dataset.defcoll==='1';g.style.display='';}
+    else{coll=!anyVis;g.style.display=anyVis?'':'none';}
+    g.classList.toggle('collapsed',coll);
   });
   syncChips();
 }
