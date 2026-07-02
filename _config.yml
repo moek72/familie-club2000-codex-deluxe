@@ -1,0 +1,11 @@
+# GitHub Pages: sluit niet-website-bestanden uit van de deploy-artifact.
+# De frames/video's maakten het artifact ~695MB waardoor de deploy time-outte.
+exclude:
+  - remotion-poule/
+  - backups/
+  - slides/
+  - src/
+  - .agents/
+  - wkpoule.backup.html
+  - wk-gazette-presentatie.html
+  - "*.md"
